@@ -26,8 +26,16 @@ const Calendar = ({
   const getSchedulesForDate = (date) => {
     const dateString = date.toDateString();
     return schedules.filter(schedule => {
-      const scheduleDate = new Date(schedule.date);
-      return scheduleDate.toDateString() === dateString;
+      const scheduleStartDate = new Date(schedule.date);
+      const scheduleEndDate = new Date(schedule.endDate);
+      
+      // 指定された日付が予定の期間内にあるかチェック
+      const currentDate = new Date(date);
+      currentDate.setHours(0, 0, 0, 0);
+      scheduleStartDate.setHours(0, 0, 0, 0);
+      scheduleEndDate.setHours(0, 0, 0, 0);
+      
+      return currentDate >= scheduleStartDate && currentDate <= scheduleEndDate;
     });
   };
   
@@ -62,25 +70,54 @@ const Calendar = ({
         >
           <span className="day-number">{day}</span>
           <div className="schedule-dots">
-            {daySchedules.slice(0, 3).map((schedule, index) => (
-              <div
-                key={schedule.id}
-                className={`schedule-item schedule-color-${schedule.color || 'blue'}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onScheduleClick(schedule);
-                }}
-                title={schedule.title}
-              >
-                <span className="schedule-time">
-                  {new Date(schedule.date).toLocaleTimeString('ja-JP', {
+            {daySchedules.slice(0, 3).map((schedule, index) => {
+              const scheduleStartDate = new Date(schedule.date);
+              const scheduleEndDate = new Date(schedule.endDate);
+              const currentDate = new Date(date);
+              
+              // 複数日予定の場合、開始日、中間日、終了日で異なる表示
+              let scheduleClass = `schedule-item schedule-color-${schedule.color || 'blue'}`;
+              let timeDisplay = '';
+              
+              if (schedule.isMultiDay) {
+                if (currentDate.toDateString() === scheduleStartDate.toDateString()) {
+                  scheduleClass += ' multi-day-start';
+                  timeDisplay = schedule.isAllDay ? '終日' : scheduleStartDate.toLocaleTimeString('ja-JP', {
                     hour: '2-digit',
                     minute: '2-digit'
-                  })}
-                </span>
-                <span className="schedule-title">{schedule.title}</span>
-              </div>
-            ))}
+                  });
+                } else if (currentDate.toDateString() === scheduleEndDate.toDateString()) {
+                  scheduleClass += ' multi-day-end';
+                  timeDisplay = schedule.isAllDay ? '終日' : '〜' + scheduleEndDate.toLocaleTimeString('ja-JP', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+                } else {
+                  scheduleClass += ' multi-day-middle';
+                  timeDisplay = '終日';
+                }
+              } else {
+                timeDisplay = schedule.isAllDay ? '終日' : scheduleStartDate.toLocaleTimeString('ja-JP', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+              }
+              
+              return (
+                <div
+                  key={schedule.id}
+                  className={scheduleClass}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onScheduleClick(schedule);
+                  }}
+                  title={schedule.title}
+                >
+                  <span className="schedule-time">{timeDisplay}</span>
+                  <span className="schedule-title">{schedule.title}</span>
+                </div>
+              );
+            })}
             {daySchedules.length > 3 && (
               <div className="more-schedules">
                 +{daySchedules.length - 3} more
