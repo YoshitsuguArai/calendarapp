@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from './Calendar';
+import WeekView from './WeekView';
 import ScheduleModal from './ScheduleModal';
 import useNotifications from './useNotifications';
 import './App.css';
@@ -85,6 +86,18 @@ function App() {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
+  const handlePrevWeek = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(currentDate.getDate() - 7);
+    setCurrentDate(newDate);
+  };
+
+  const handleNextWeek = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(currentDate.getDate() + 7);
+    setCurrentDate(newDate);
+  };
+
   const handleToday = () => {
     setCurrentDate(new Date());
   };
@@ -135,6 +148,12 @@ function App() {
                 カレンダー
               </button>
               <button 
+                className={view === 'week' ? 'active' : ''}
+                onClick={() => setView('week')}
+              >
+                週間
+              </button>
+              <button 
                 className={view === 'list' ? 'active' : ''}
                 onClick={() => setView('list')}
               >
@@ -154,6 +173,15 @@ function App() {
             onScheduleClick={handleScheduleClick}
             onPrevMonth={handlePrevMonth}
             onNextMonth={handleNextMonth}
+          />
+        ) : view === 'week' ? (
+          <WeekView
+            currentDate={currentDate}
+            schedules={schedules}
+            onDateClick={handleDateClick}
+            onScheduleClick={handleScheduleClick}
+            onPrevWeek={handlePrevWeek}
+            onNextWeek={handleNextWeek}
           />
         ) : (
           <div className="schedule-list">
