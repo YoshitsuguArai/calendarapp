@@ -10,11 +10,13 @@ const ScheduleModal = ({
 }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [time, setTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('blue');
   const [isAllDay, setIsAllDay] = useState(false);
+  const [isMultiDay, setIsMultiDay] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderMinutes, setReminderMinutes] = useState(15);
   const [reminderType, setReminderType] = useState('preset'); // 'preset' or 'custom'
@@ -48,15 +50,26 @@ const ScheduleModal = ({
       setTime(`${hours}:${minutes}`);
       
       if (schedule.endDate) {
-        const endDate = new Date(schedule.endDate);
-        const endHours = String(endDate.getHours()).padStart(2, '0');
-        const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+        const endDateObj = new Date(schedule.endDate);
+        const endYear = endDateObj.getFullYear();
+        const endMonth = String(endDateObj.getMonth() + 1).padStart(2, '0');
+        const endDay = String(endDateObj.getDate()).padStart(2, '0');
+        const endDateStr = `${endYear}-${endMonth}-${endDay}`;
+        setEndDate(endDateStr);
+        
+        const endHours = String(endDateObj.getHours()).padStart(2, '0');
+        const endMinutes = String(endDateObj.getMinutes()).padStart(2, '0');
         setEndTime(`${endHours}:${endMinutes}`);
+        
+        // 複数日かどうかを判定
+        setIsMultiDay(dateStr !== endDateStr);
       } else {
-        const endDate = new Date(scheduleDate.getTime() + 60 * 60 * 1000);
-        const endHours = String(endDate.getHours()).padStart(2, '0');
-        const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+        setEndDate(dateStr);
+        const endDateTime = new Date(scheduleDate.getTime() + 60 * 60 * 1000);
+        const endHours = String(endDateTime.getHours()).padStart(2, '0');
+        const endMinutes = String(endDateTime.getMinutes()).padStart(2, '0');
         setEndTime(`${endHours}:${endMinutes}`);
+        setIsMultiDay(false);
       }
       
       setDescription(schedule.description || '');
@@ -82,12 +95,14 @@ const ScheduleModal = ({
       const day = String(selectedDate.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
       setDate(dateStr);
+      setEndDate(dateStr);
       setTime('09:00');
       setEndTime('10:00');
       setTitle('');
       setDescription('');
       setColor('blue');
       setIsAllDay(false);
+      setIsMultiDay(false);
       setReminderEnabled(false);
       setReminderMinutes(15);
       setReminderType('preset');
@@ -102,6 +117,7 @@ const ScheduleModal = ({
 
     // ローカル時間として正確に処理するため、年月日時分を個別に指定
     const [year, month, day] = date.split('-').map(num => parseInt(num));
+    const [endYear, endMonth, endDay] = endDate.split('-').map(num => parseInt(num));
     
     const startDateTime = isAllDay 
       ? new Date(year, month - 1, day, 0, 0, 0)
@@ -111,10 +127,10 @@ const ScheduleModal = ({
         })();
     
     const endDateTime = isAllDay 
-      ? new Date(year, month - 1, day, 23, 59, 59)
+      ? new Date(endYear, endMonth - 1, endDay, 23, 59, 59)
       : (() => {
           const [hours, minutes] = endTime.split(':').map(num => parseInt(num));
-          return new Date(year, month - 1, day, hours, minutes, 0);
+          return new Date(endYear, endMonth - 1, endDay, hours, minutes, 0);
         })();
 
     // リマインダーの分数を計算
@@ -130,6 +146,7 @@ const ScheduleModal = ({
       description,
       color,
       isAllDay,
+      isMultiDay: date !== endDate,
       reminder: {
         enabled: reminderEnabled,
         minutes: finalReminderMinutes,
@@ -169,13 +186,33 @@ const ScheduleModal = ({
             />
           </div>
 
-          <div className="form-group">
-            <label>日付</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+          <div className="date-group">
+            <div className="form-group">
+              <label>開始日</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  if (e.target.value > endDate) {
+                    setEndDate(e.target.value);
+                  }
+                  setIsMultiDay(e.target.value !== endDate);
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label>終了日</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setIsMultiDay(date !== e.target.value);
+                }}
+                min={date}
+              />
+            </div>
           </div>
 
           <div className="form-group">
@@ -187,6 +224,9 @@ const ScheduleModal = ({
               />
               終日
             </label>
+            {isMultiDay && (
+              <span className="multi-day-indicator">🗓️ 複数日の予定</span>
+            )}
           </div>
 
           {!isAllDay && (
