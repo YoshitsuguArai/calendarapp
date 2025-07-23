@@ -268,6 +268,66 @@
 .schedule-item.schedule-color-orange { background: #e8710a; }
 .schedule-item.schedule-color-pink { background: #c2185b; }
 
+/* Multi-day schedule styles */
+.schedule-item.multi-day-start {
+  border-top-right-radius: 2px;
+  border-bottom-right-radius: 2px;
+  position: relative;
+}
+
+.schedule-item.multi-day-start::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: inherit;
+  border-radius: 0 4px 4px 0;
+}
+
+.schedule-item.multi-day-middle {
+  border-radius: 2px;
+  position: relative;
+}
+
+.schedule-item.multi-day-middle::before,
+.schedule-item.multi-day-middle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: inherit;
+}
+
+.schedule-item.multi-day-middle::before {
+  left: -1px;
+  border-radius: 4px 0 0 4px;
+}
+
+.schedule-item.multi-day-middle::after {
+  right: -1px;
+  border-radius: 0 4px 4px 0;
+}
+
+.schedule-item.multi-day-end {
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+  position: relative;
+}
+
+.schedule-item.multi-day-end::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: inherit;
+  border-radius: 4px 0 0 4px;
+}
+
 .schedule-time {
   font-weight: 500;
   margin-right: 4px;
@@ -343,6 +403,20 @@
 
 .modal-body {
   padding: 0 24px;
+}
+
+.date-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.multi-day-indicator {
+  margin-left: 12px;
+  color: #137333;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .form-group {
