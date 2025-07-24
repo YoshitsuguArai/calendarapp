@@ -137,27 +137,47 @@ const useNotifications = () => {
       const now = new Date();
       
       schedules.forEach(schedule => {
-        if (!schedule.reminder || !schedule.reminder.enabled) return;
-        
-        // 既に通知済みの場合はスキップ
-        const notificationKey = `${schedule.id}-${schedule.reminder.minutes}`;
-        if (notifiedSchedules.current.has(notificationKey)) return;
+        // 新形式の複数リマインダーをチェック
+        if (schedule.reminders && Array.isArray(schedule.reminders)) {
+          schedule.reminders.forEach(reminder => {
+            const notificationKey = `${schedule.id}-${reminder.id}-${reminder.minutes}`;
+            if (notifiedSchedules.current.has(notificationKey)) return;
 
-        const scheduleTime = new Date(schedule.date);
-        const reminderTime = new Date(scheduleTime.getTime() - schedule.reminder.minutes * 60 * 1000);
-        
-        // 30秒以内の誤差でリマインダーをチェック（精度を上げて重複を防ぐ）
-        const timeDiff = Math.abs(now.getTime() - reminderTime.getTime());
-        if (timeDiff < 30000) {
-          showNotification(`予定のリマインダー`, {
-            body: `${schedule.title}\n${scheduleTime.toLocaleString('ja-JP')}`,
-            tag: `reminder-${schedule.id}`,
-            requireInteraction: true
+            const scheduleTime = new Date(schedule.date);
+            const reminderTime = new Date(scheduleTime.getTime() - reminder.minutes * 60 * 1000);
+            
+            const timeDiff = Math.abs(now.getTime() - reminderTime.getTime());
+            if (timeDiff < 30000) {
+              showNotification(`予定のリマインダー`, {
+                body: `${schedule.title}\n${scheduleTime.toLocaleString('ja-JP')}`,
+                tag: `reminder-${schedule.id}-${reminder.id}`,
+                requireInteraction: true
+              });
+              
+              notifiedSchedules.current.add(notificationKey);
+              console.log(`リマインダー通知: ${schedule.title} (${notificationKey})`);
+            }
           });
+        }
+        // 旧形式の単一リマインダーもサポート（後方互換性）
+        else if (schedule.reminder && schedule.reminder.enabled) {
+          const notificationKey = `${schedule.id}-legacy-${schedule.reminder.minutes}`;
+          if (notifiedSchedules.current.has(notificationKey)) return;
+
+          const scheduleTime = new Date(schedule.date);
+          const reminderTime = new Date(scheduleTime.getTime() - schedule.reminder.minutes * 60 * 1000);
           
-          // 通知済みとして記録
-          notifiedSchedules.current.add(notificationKey);
-          console.log(`リマインダー通知: ${schedule.title} (${notificationKey})`);
+          const timeDiff = Math.abs(now.getTime() - reminderTime.getTime());
+          if (timeDiff < 30000) {
+            showNotification(`予定のリマインダー`, {
+              body: `${schedule.title}\n${scheduleTime.toLocaleString('ja-JP')}`,
+              tag: `reminder-${schedule.id}`,
+              requireInteraction: true
+            });
+            
+            notifiedSchedules.current.add(notificationKey);
+            console.log(`リマインダー通知: ${schedule.title} (${notificationKey})`);
+          }
         }
       });
     }, 30000); // 30秒ごとにチェック（頻度を上げて精度向上）

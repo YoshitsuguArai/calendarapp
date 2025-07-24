@@ -18,12 +18,7 @@ const ScheduleModal = ({
   const [color, setColor] = useState('blue');
   const [isAllDay, setIsAllDay] = useState(false);
   const [isMultiDay, setIsMultiDay] = useState(false);
-  const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderMinutes, setReminderMinutes] = useState(defaultNotificationTime);
-  const [reminderType, setReminderType] = useState('preset'); // 'preset' or 'custom'
-  const [customDays, setCustomDays] = useState(0);
-  const [customHours, setCustomHours] = useState(0);
-  const [customMinutes, setCustomMinutes] = useState(defaultNotificationTime);
+  const [reminders, setReminders] = useState([]);
 
   const colors = [
     { name: 'blue', label: 'ブルー', value: '#1976d2' },
@@ -76,18 +71,19 @@ const ScheduleModal = ({
       setDescription(schedule.description || '');
       setColor(schedule.color || 'blue');
       setIsAllDay(schedule.isAllDay || false);
-      setReminderEnabled(schedule.reminder?.enabled || false);
-      setReminderMinutes(schedule.reminder?.minutes || 15);
-      setReminderType(schedule.reminder?.type || 'preset');
       
-      if (schedule.reminder?.type === 'custom') {
-        const totalMinutes = schedule.reminder?.minutes || 15;
-        const days = Math.floor(totalMinutes / 1440);
-        const hours = Math.floor((totalMinutes % 1440) / 60);
-        const minutes = totalMinutes % 60;
-        setCustomDays(days);
-        setCustomHours(hours);
-        setCustomMinutes(minutes);
+      // 複数リマインダーの設定を読み込み
+      if (schedule.reminders && Array.isArray(schedule.reminders)) {
+        setReminders(schedule.reminders);
+      } else if (schedule.reminder?.enabled) {
+        // 旧形式から新形式に変換
+        setReminders([{
+          id: Date.now(),
+          minutes: schedule.reminder.minutes || 15,
+          type: schedule.reminder.type || 'preset'
+        }]);
+      } else {
+        setReminders([]);
       }
     } else if (selectedDate) {
       // ローカル日付として正しく表示するため、タイムゾーンオフセットを考慮
@@ -104,14 +100,51 @@ const ScheduleModal = ({
       setColor('blue');
       setIsAllDay(false);
       setIsMultiDay(false);
-      setReminderEnabled(false);
-      setReminderMinutes(15);
-      setReminderType('preset');
-      setCustomDays(0);
-      setCustomHours(0);
-      setCustomMinutes(15);
+      setReminders([]);
     }
   }, [schedule, selectedDate, isOpen]);
+
+  // 重複するリマインダーをチェックする関数
+  const isDuplicateReminder = (newMinutes, excludeId = null) => {
+    return reminders.some(reminder => 
+      reminder.id !== excludeId && reminder.minutes === newMinutes
+    );
+  };
+
+  // リマインダー追加時の重複チェック
+  const addReminder = () => {
+    const newReminder = {
+      id: Date.now(),
+      minutes: 15,
+      type: 'preset'
+    };
+    
+    // デフォルト値が重複している場合は、重複しない値を探す
+    const defaultOptions = [15, 30, 60, 120, 1440];
+    let minutesToUse = newReminder.minutes;
+    
+    for (const option of defaultOptions) {
+      if (!isDuplicateReminder(option)) {
+        minutesToUse = option;
+        break;
+      }
+    }
+    
+    newReminder.minutes = minutesToUse;
+    setReminders([...reminders, newReminder]);
+  };
+
+  // リマインダー変更時の重複チェック
+  const updateReminder = (reminderId, field, value) => {
+    if (field === 'minutes' && isDuplicateReminder(value, reminderId)) {
+      // 重複している場合は変更を無視
+      return;
+    }
+    
+    setReminders(reminders.map(r => 
+      r.id === reminderId ? {...r, [field]: value} : r
+    ));
+  };
 
   const handleSave = () => {
     if (!title || (!isAllDay && !time)) return;
@@ -134,11 +167,6 @@ const ScheduleModal = ({
           return new Date(endYear, endMonth - 1, endDay, hours, minutes, 0);
         })();
 
-    // リマインダーの分数を計算
-    const finalReminderMinutes = reminderType === 'custom' 
-      ? (customDays * 1440) + (customHours * 60) + customMinutes
-      : reminderMinutes;
-
     const scheduleData = {
       id: schedule?.id || Date.now(),
       title,
@@ -148,11 +176,7 @@ const ScheduleModal = ({
       color,
       isAllDay,
       isMultiDay: date !== endDate,
-      reminder: {
-        enabled: reminderEnabled,
-        minutes: finalReminderMinutes,
-        type: reminderType
-      }
+      reminders: reminders
     };
 
     onSave(scheduleData);
@@ -276,103 +300,136 @@ const ScheduleModal = ({
             />
           </div>
 
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={reminderEnabled}
-                onChange={(e) => setReminderEnabled(e.target.checked)}
-              />
-              リマインダーを設定
-            </label>
-          </div>
+          <div className="reminders-section">
+            <div className="form-group">
+              <label>リマインダー設定</label>
+              <button 
+                type="button" 
+                className="add-reminder-btn"
+                onClick={addReminder}
+              >
+                + リマインダーを追加
+              </button>
+            </div>
 
-          {reminderEnabled && (
-            <div className="reminder-settings">
-              <div className="form-group">
-                <label>通知タイミング設定</label>
+            {reminders.map((reminder, index) => (
+              <div key={reminder.id} className="reminder-item">
+                <div className="reminder-header">
+                  <span>リマインダー {index + 1}</span>
+                  <button 
+                    type="button"
+                    className="remove-reminder-btn"
+                    onClick={() => setReminders(reminders.filter(r => r.id !== reminder.id))}
+                  >
+                    削除
+                  </button>
+                </div>
+                
                 <div className="reminder-type-selector">
                   <label className="radio-label">
                     <input
                       type="radio"
-                      name="reminderType"
+                      name={`reminderType-${reminder.id}`}
                       value="preset"
-                      checked={reminderType === 'preset'}
-                      onChange={(e) => setReminderType(e.target.value)}
+                      checked={reminder.type === 'preset'}
+                      onChange={(e) => updateReminder(reminder.id, 'type', e.target.value)}
                     />
                     プリセット
                   </label>
                   <label className="radio-label">
                     <input
                       type="radio"
-                      name="reminderType"
+                      name={`reminderType-${reminder.id}`}
                       value="custom"
-                      checked={reminderType === 'custom'}
-                      onChange={(e) => setReminderType(e.target.value)}
+                      checked={reminder.type === 'custom'}
+                      onChange={(e) => updateReminder(reminder.id, 'type', e.target.value)}
                     />
                     カスタム
                   </label>
                 </div>
-              </div>
 
-              {reminderType === 'preset' && (
-                <div className="form-group">
-                  <label>通知タイミング</label>
-                  <select
-                    value={reminderMinutes}
-                    onChange={(e) => setReminderMinutes(parseInt(e.target.value))}
-                  >
-                    <option value={1}>1分前</option>
-                    <option value={5}>5分前</option>
-                    <option value={10}>10分前</option>
-                    <option value={15}>15分前</option>
-                    <option value={30}>30分前</option>
-                    <option value={60}>1時間前</option>
-                    <option value={120}>2時間前</option>
-                    <option value={1440}>1日前</option>
-                  </select>
-                </div>
-              )}
-
-              {reminderType === 'custom' && (
-                <div className="custom-reminder">
-                  <label>カスタム設定</label>
-                  <div className="custom-time-inputs">
-                    <div className="time-input-group">
-                      <input
-                        type="number"
-                        min="0"
-                        max="30"
-                        value={customDays}
-                        onChange={(e) => setCustomDays(parseInt(e.target.value) || 0)}
-                      />
-                      <span>日</span>
-                    </div>
-                    <div className="time-input-group">
-                      <input
-                        type="number"
-                        min="0"
-                        max="23"
-                        value={customHours}
-                        onChange={(e) => setCustomHours(parseInt(e.target.value) || 0)}
-                      />
-                      <span>時間</span>
-                    </div>
-                    <div className="time-input-group">
-                      <input
-                        type="number"
-                        min="1"
-                        max="59"
-                        value={customMinutes}
-                        onChange={(e) => setCustomMinutes(parseInt(e.target.value) || 1)}
-                      />
-                      <span>分前</span>
-                    </div>
+                {reminder.type === 'preset' && (
+                  <div className="form-group">
+                    <select
+                      value={reminder.minutes}
+                      onChange={(e) => updateReminder(reminder.id, 'minutes', parseInt(e.target.value))}
+                    >
+                      <option value={1} disabled={isDuplicateReminder(1, reminder.id)}>1分前</option>
+                      <option value={5} disabled={isDuplicateReminder(5, reminder.id)}>5分前</option>
+                      <option value={10} disabled={isDuplicateReminder(10, reminder.id)}>10分前</option>
+                      <option value={15} disabled={isDuplicateReminder(15, reminder.id)}>15分前</option>
+                      <option value={30} disabled={isDuplicateReminder(30, reminder.id)}>30分前</option>
+                      <option value={60} disabled={isDuplicateReminder(60, reminder.id)}>1時間前</option>
+                      <option value={120} disabled={isDuplicateReminder(120, reminder.id)}>2時間前</option>
+                      <option value={1440} disabled={isDuplicateReminder(1440, reminder.id)}>1日前</option>
+                      <option value={10080} disabled={isDuplicateReminder(10080, reminder.id)}>1週間前</option>
+                    </select>
+                    {isDuplicateReminder(reminder.minutes, reminder.id) && (
+                      <div className="duplicate-warning">⚠️ この時間は既に他のリマインダーで設定されています</div>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+
+                {reminder.type === 'custom' && (
+                  <div className="custom-reminder">
+                    <div className="custom-time-inputs">
+                      <div className="time-input-group">
+                        <input
+                          type="number"
+                          min="0"
+                          max="30"
+                          value={Math.floor(reminder.minutes / 1440)}
+                          onChange={(e) => {
+                            const days = parseInt(e.target.value) || 0;
+                            const hours = Math.floor((reminder.minutes % 1440) / 60);
+                            const mins = reminder.minutes % 60;
+                            const newMinutes = days * 1440 + hours * 60 + mins;
+                            updateReminder(reminder.id, 'minutes', newMinutes);
+                          }}
+                        />
+                        <span>日</span>
+                      </div>
+                      <div className="time-input-group">
+                        <input
+                          type="number"
+                          min="0"
+                          max="23"
+                          value={Math.floor((reminder.minutes % 1440) / 60)}
+                          onChange={(e) => {
+                            const days = Math.floor(reminder.minutes / 1440);
+                            const hours = parseInt(e.target.value) || 0;
+                            const mins = reminder.minutes % 60;
+                            const newMinutes = days * 1440 + hours * 60 + mins;
+                            updateReminder(reminder.id, 'minutes', newMinutes);
+                          }}
+                        />
+                        <span>時間</span>
+                      </div>
+                      <div className="time-input-group">
+                        <input
+                          type="number"
+                          min="1"
+                          max="59"
+                          value={reminder.minutes % 60 || 1}
+                          onChange={(e) => {
+                            const days = Math.floor(reminder.minutes / 1440);
+                            const hours = Math.floor((reminder.minutes % 1440) / 60);
+                            const mins = parseInt(e.target.value) || 1;
+                            const newMinutes = days * 1440 + hours * 60 + mins;
+                            updateReminder(reminder.id, 'minutes', newMinutes);
+                          }}
+                        />
+                        <span>分前</span>
+                      </div>
+                    </div>
+                    {isDuplicateReminder(reminder.minutes, reminder.id) && (
+                      <div className="duplicate-warning">⚠️ この時間は既に他のリマインダーで設定されています</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="modal-footer">
