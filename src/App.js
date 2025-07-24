@@ -2,18 +2,24 @@ import React, { useState, useEffect } from 'react';
 import Calendar from './Calendar';
 import WeekView from './WeekView';
 import ScheduleModal from './ScheduleModal';
+import Settings from './Settings';
 import useNotifications from './useNotifications';
 import { useScheduleManager } from './hooks/useScheduleManager';
+import { useSettings } from './hooks/useSettings';
 import { formatDate } from './utils/dateUtils';
+import { useTranslation } from './utils/translations';
 import './App.css';
 
 function App() {
   const { schedules, saveSchedule, deleteSchedule } = useScheduleManager();
+  const { settings, updateSetting } = useSettings();
+  const { t } = useTranslation(settings.language);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
-  const [view, setView] = useState('calendar');
+  const [view, setView] = useState(settings.defaultView);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { 
     permission, 
     requestPermission, 
@@ -22,6 +28,16 @@ function App() {
     showNotification
   } = useNotifications();
 
+
+  // 設定変更時にviewを更新
+  useEffect(() => {
+    setView(settings.defaultView);
+  }, [settings.defaultView]);
+
+  // テーマ適用
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', settings.theme);
+  }, [settings.theme]);
 
   // 通知許可と定期チェックの初期化
   useEffect(() => {
@@ -87,8 +103,8 @@ function App() {
   };
 
   const handleTestNotification = () => {
-    showNotification('テスト通知', {
-      body: 'これはテスト通知です。音も一緒に再生されます。',
+    showNotification(t('notification.testTitle'), {
+      body: t('notification.testBody'),
       requireInteraction: false
     });
   };
@@ -98,40 +114,38 @@ function App() {
     <div className="App">
       <header className="App-header">
         <div className="header-content">
-          <h1>予定管理アプリ</h1>
+          <h1>{t('header.title')}</h1>
           <div className="header-controls">
-            <button onClick={handleToday} className="today-btn">今日</button>
+            <button onClick={handleToday} className="today-btn">{t('header.today')}</button>
             {permission !== 'granted' && (
               <button onClick={requestPermission} className="notification-btn">
-                通知を有効にする
+                {t('header.enableNotifications')}
               </button>
             )}
             {permission === 'granted' && (
-              <>
-                <span className="notification-status">🔔 通知有効</span>
-                <button onClick={handleTestNotification} className="test-notification-btn">
-                  🔊 テスト
-                </button>
-              </>
+              <span className="notification-status">{t('header.notificationEnabled')}</span>
             )}
+            <button onClick={() => setIsSettingsOpen(true)} className="settings-btn">
+              {t('header.settings')}
+            </button>
             <div className="view-switcher">
               <button 
                 className={view === 'calendar' ? 'active' : ''}
                 onClick={() => setView('calendar')}
               >
-                カレンダー
+                {t('view.calendar')}
               </button>
               <button 
                 className={view === 'week' ? 'active' : ''}
                 onClick={() => setView('week')}
               >
-                週間
+                {t('view.week')}
               </button>
               <button 
                 className={view === 'list' ? 'active' : ''}
                 onClick={() => setView('list')}
               >
-                リスト
+                {t('view.list')}
               </button>
             </div>
           </div>
@@ -147,6 +161,9 @@ function App() {
             onScheduleClick={handleScheduleClick}
             onPrevMonth={handlePrevMonth}
             onNextMonth={handleNextMonth}
+            weekStartsOn={settings.weekStartsOn}
+            showWeekNumbers={settings.showWeekNumbers}
+            language={settings.language}
           />
         ) : view === 'week' ? (
           <WeekView
@@ -156,12 +173,14 @@ function App() {
             onScheduleClick={handleScheduleClick}
             onPrevWeek={handlePrevWeek}
             onNextWeek={handleNextWeek}
+            weekStartsOn={settings.weekStartsOn}
+            language={settings.language}
           />
         ) : (
           <div className="schedule-list">
-            <h2>予定一覧</h2>
+            <h2>{t('scheduleList.title')}</h2>
             {schedules.length === 0 ? (
-              <p className="no-schedules">予定がありません</p>
+              <p className="no-schedules">{t('scheduleList.noSchedules')}</p>
             ) : (
               <div className="schedules">
                 {schedules
@@ -170,7 +189,7 @@ function App() {
                     <div key={schedule.id} className="schedule-item">
                       <div className="schedule-info">
                         <h3>{schedule.title}</h3>
-                        <p className="schedule-date">{formatDate(schedule.date)}</p>
+                        <p className="schedule-date">{formatDate(schedule.date, {}, settings.dateFormat)}</p>
                         {schedule.description && (
                           <p className="schedule-description">{schedule.description}</p>
                         )}
@@ -180,13 +199,13 @@ function App() {
                           onClick={() => handleScheduleClick(schedule)}
                           className="edit-btn"
                         >
-                          編集
+                          {t('scheduleList.edit')}
                         </button>
                         <button 
                           onClick={() => handleDeleteSchedule(schedule.id)}
                           className="delete-btn"
                         >
-                          削除
+                          {t('scheduleList.delete')}
                         </button>
                       </div>
                     </div>
@@ -204,6 +223,18 @@ function App() {
         onDelete={handleDeleteSchedule}
         schedule={editingSchedule}
         selectedDate={selectedDate}
+        defaultNotificationTime={settings.notificationTime}
+        language={settings.language}
+      />
+
+      <Settings
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onSettingChange={updateSetting}
+        onTestNotification={handleTestNotification}
+        notificationPermission={permission}
+        language={settings.language}
       />
     </div>
   );

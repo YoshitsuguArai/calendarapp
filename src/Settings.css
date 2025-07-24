@@ -1,0 +1,282 @@
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.settings-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.settings-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.settings-content {
+  padding: 24px;
+}
+
+.setting-group {
+  margin-bottom: 32px;
+}
+
+.setting-group:last-child {
+  margin-bottom: 0;
+}
+
+.setting-group h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 1.2rem;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 8px;
+}
+
+.setting-item {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-item label {
+  font-weight: 500;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-item select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.setting-item select:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+.setting-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.settings-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.cancel-btn:hover {
+  background-color: #545b62;
+}
+
+.save-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.save-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.save-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.save-btn.has-changes {
+  background-color: #007bff;
+  animation: pulse 1s infinite;
+}
+
+.save-btn.has-changes:hover {
+  background-color: #0056b3;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+}
+
+.notification-test-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notification-status-display {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.notification-granted {
+  color: #137333;
+  background-color: #e6f4ea;
+}
+
+.notification-denied {
+  color: #d93025;
+  background-color: #fce8e6;
+}
+
+.notification-default {
+  color: #ea8600;
+  background-color: #fef7e0;
+}
+
+.test-notification-btn {
+  background-color: #34a853;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.test-notification-btn:hover {
+  background-color: #2e7d32;
+}
+
+/* ダークテーマ対応 */
+[data-theme="dark"] .settings-modal {
+  background: #2d2d2d;
+  color: white;
+}
+
+[data-theme="dark"] .settings-header {
+  border-bottom-color: #404040;
+}
+
+[data-theme="dark"] .settings-header h2,
+[data-theme="dark"] .setting-group h3,
+[data-theme="dark"] .setting-item label {
+  color: white;
+}
+
+[data-theme="dark"] .setting-group h3 {
+  border-bottom-color: #404040;
+}
+
+[data-theme="dark"] .setting-item select {
+  background-color: #404040;
+  border-color: #555;
+  color: white;
+}
+
+[data-theme="dark"] .setting-item select:focus {
+  border-color: #4caf50;
+}
+
+[data-theme="dark"] .close-btn {
+  color: #ccc;
+}
+
+[data-theme="dark"] .close-btn:hover {
+  background-color: #404040;
+}
+
+[data-theme="dark"] .settings-footer {
+  border-top-color: #404040;
+}
+
+[data-theme="dark"] .notification-granted {
+  color: #81c995;
+  background-color: #1e4620;
+}
+
+[data-theme="dark"] .notification-denied {
+  color: #f28b82;
+  background-color: #5f2120;
+}
+
+[data-theme="dark"] .notification-default {
+  color: #fdd663;
+  background-color: #3e2723;
+}
+
+[data-theme="dark"] .test-notification-btn {
+  background-color: #34a853;
+}
+
+[data-theme="dark"] .test-notification-btn:hover {
+  background-color: #2e7d32;
+}

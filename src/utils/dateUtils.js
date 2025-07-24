@@ -3,15 +3,33 @@ export const isToday = (date) => {
   return date.toDateString() === today.toDateString();
 };
 
-export const formatDate = (dateString, options = {}) => {
-  const defaultOptions = { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric', 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  };
-  return new Date(dateString).toLocaleDateString('ja-JP', { ...defaultOptions, ...options });
+export const formatDate = (dateString, options = {}, dateFormat = 'YYYY/MM/DD') => {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  
+  let formattedDate = '';
+  switch (dateFormat) {
+    case 'MM/DD/YYYY':
+      formattedDate = `${month}/${day}/${year}`;
+      break;
+    case 'DD/MM/YYYY':
+      formattedDate = `${day}/${month}/${year}`;
+      break;
+    case 'YYYY/MM/DD':
+    default:
+      formattedDate = `${year}/${month}/${day}`;
+      break;
+  }
+  
+  if (options.includeTime !== false && (date.getHours() > 0 || date.getMinutes() > 0)) {
+    formattedDate += ` ${hours}:${minutes}`;
+  }
+  
+  return formattedDate;
 };
 
 export const formatTimeRange = (startDate, endDate) => {
@@ -26,10 +44,10 @@ export const formatTimeRange = (startDate, endDate) => {
   return `${startTime} - ${endTime}`;
 };
 
-export const getWeekStart = (date) => {
+export const getWeekStart = (date, weekStartsOn = 0) => {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = d.getDate() - day;
+  const diff = d.getDate() - ((day - weekStartsOn + 7) % 7);
   return new Date(d.setDate(diff));
 };
 
@@ -51,4 +69,16 @@ export const formatWeekRange = (weekStart) => {
 
 export const isSameDate = (date1, date2) => {
   return date1.toDateString() === date2.toDateString();
+};
+
+export const getWeekNumber = (date) => {
+  const target = new Date(date.valueOf());
+  const dayNr = (date.getDay() + 6) % 7;
+  target.setDate(target.getDate() - dayNr + 3);
+  const firstThursday = target.valueOf();
+  target.setMonth(0, 1);
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+  }
+  return 1 + Math.ceil((firstThursday - target) / 604800000);
 };
