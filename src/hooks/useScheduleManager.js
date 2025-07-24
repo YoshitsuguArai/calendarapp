@@ -2,17 +2,34 @@ import { useState, useEffect } from 'react';
 
 export const useScheduleManager = () => {
   const [schedules, setSchedules] = useState([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const savedSchedules = localStorage.getItem('schedules');
-    if (savedSchedules) {
-      setSchedules(JSON.parse(savedSchedules));
+    try {
+      const savedSchedules = localStorage.getItem('schedules');
+      console.log('Loading schedules from localStorage:', savedSchedules);
+      if (savedSchedules) {
+        const parsedSchedules = JSON.parse(savedSchedules);
+        console.log('Parsed schedules:', parsedSchedules);
+        setSchedules(parsedSchedules);
+      }
+      setIsLoaded(true);
+    } catch (error) {
+      console.error('Error loading schedules from localStorage:', error);
+      setIsLoaded(true);
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('schedules', JSON.stringify(schedules));
-  }, [schedules]);
+    if (!isLoaded) return; // 初回読み込み完了まで保存しない
+    
+    try {
+      console.log('Saving schedules to localStorage:', schedules);
+      localStorage.setItem('schedules', JSON.stringify(schedules));
+    } catch (error) {
+      console.error('Error saving schedules to localStorage:', error);
+    }
+  }, [schedules, isLoaded]);
 
   const addSchedule = (scheduleData) => {
     setSchedules(prev => [...prev, scheduleData]);
