@@ -8,13 +8,15 @@ const WeekView = ({
   onDateClick, 
   onScheduleClick,
   onPrevWeek,
-  onNextWeek 
+  onNextWeek,
+  weekStartsOn = 0
 }) => {
-  const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
+  const baseWeekDays = ['日', '月', '火', '水', '木', '金', '土'];
+  const weekDays = [...baseWeekDays.slice(weekStartsOn), ...baseWeekDays.slice(0, weekStartsOn)];
   const hours = Array.from({ length: 24 }, (_, i) => i);
   
   
-  const weekStart = getWeekStart(currentDate);
+  const weekStart = getWeekStart(currentDate, weekStartsOn);
   const weekDates = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(weekStart);
     date.setDate(weekStart.getDate() + i);
