@@ -3,10 +3,12 @@ import Calendar from './Calendar';
 import WeekView from './WeekView';
 import ScheduleModal from './ScheduleModal';
 import useNotifications from './useNotifications';
+import { useScheduleManager } from './hooks/useScheduleManager';
+import { formatDate } from './utils/dateUtils';
 import './App.css';
 
 function App() {
-  const [schedules, setSchedules] = useState([]);
+  const { schedules, saveSchedule, deleteSchedule } = useScheduleManager();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,20 +19,9 @@ function App() {
     requestPermission, 
     startPeriodicCheck, 
     stopPeriodicCheck,
-    playNotificationSound,
     showNotification
   } = useNotifications();
 
-  useEffect(() => {
-    const savedSchedules = localStorage.getItem('schedules');
-    if (savedSchedules) {
-      setSchedules(JSON.parse(savedSchedules));
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('schedules', JSON.stringify(schedules));
-  }, [schedules]);
 
   // 通知許可と定期チェックの初期化
   useEffect(() => {
@@ -64,18 +55,11 @@ function App() {
   };
 
   const handleSaveSchedule = (scheduleData) => {
-    if (editingSchedule) {
-      setSchedules(schedules.map(schedule => 
-        schedule.id === editingSchedule.id ? scheduleData : schedule
-      ));
-    } else {
-      setSchedules([...schedules, scheduleData]);
-    }
-    // 定期チェックで自動的に処理されるため、個別のスケジュール処理は不要
+    saveSchedule(scheduleData);
   };
 
   const handleDeleteSchedule = (id) => {
-    setSchedules(schedules.filter(schedule => schedule.id !== id));
+    deleteSchedule(id);
   };
 
   const handlePrevMonth = () => {
@@ -109,16 +93,6 @@ function App() {
     });
   };
 
-  const formatDate = (dateString) => {
-    const options = { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    };
-    return new Date(dateString).toLocaleDateString('ja-JP', options);
-  };
 
   return (
     <div className="App">

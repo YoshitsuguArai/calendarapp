@@ -1,4 +1,6 @@
 import React from 'react';
+import { isToday, getWeekStart, formatWeekRange } from './utils/dateUtils';
+import { getSchedulesForDate, getSchedulePosition } from './utils/scheduleUtils';
 
 const WeekView = ({ 
   currentDate, 
@@ -11,13 +13,6 @@ const WeekView = ({
   const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
   const hours = Array.from({ length: 24 }, (_, i) => i);
   
-  // 週の開始日（日曜日）を取得
-  const getWeekStart = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day;
-    return new Date(d.setDate(diff));
-  };
   
   const weekStart = getWeekStart(currentDate);
   const weekDates = Array.from({ length: 7 }, (_, i) => {
@@ -26,65 +21,9 @@ const WeekView = ({
     return date;
   });
   
-  // 指定された日付の予定を取得（重複なし）
-  const getSchedulesForDate = (date) => {
-    return schedules.filter(schedule => {
-      const scheduleStart = new Date(schedule.date);
-      const scheduleEnd = new Date(schedule.endDate);
-      const currentDate = new Date(date);
-      
-      // 日付レベルでのチェック
-      currentDate.setHours(0, 0, 0, 0);
-      const startDate = new Date(scheduleStart);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(scheduleEnd);
-      endDate.setHours(0, 0, 0, 0);
-      
-      return currentDate >= startDate && currentDate <= endDate;
-    });
-  };
   
-  // 予定の表示時間を計算
-  const getSchedulePosition = (schedule, date) => {
-    const scheduleStart = new Date(schedule.date);
-    const scheduleEnd = new Date(schedule.endDate);
-    
-    if (schedule.isAllDay) {
-      return { top: 0, height: 100 };
-    }
-    
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    
-    const startMinutes = (scheduleStart - dayStart) / (1000 * 60);
-    const duration = (scheduleEnd - scheduleStart) / (1000 * 60);
-    
-    const top = (startMinutes / 60) * 50; // 1時間 = 50px
-    const height = Math.max((duration / 60) * 50, 20); // 最小20px
-    
-    return { top, height };
-  };
   
-  const isToday = (date) => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
   
-  const formatWeekRange = () => {
-    const endDate = new Date(weekStart);
-    endDate.setDate(weekStart.getDate() + 6);
-    
-    const startMonth = weekStart.getMonth() + 1;
-    const startDay = weekStart.getDate();
-    const endMonth = endDate.getMonth() + 1;
-    const endDay = endDate.getDate();
-    
-    if (startMonth === endMonth) {
-      return `${weekStart.getFullYear()}年${startMonth}月${startDay}日 - ${endDay}日`;
-    } else {
-      return `${weekStart.getFullYear()}年${startMonth}月${startDay}日 - ${endMonth}月${endDay}日`;
-    }
-  };
   
   return (
     <div className="week-view">
@@ -92,7 +31,7 @@ const WeekView = ({
         <button onClick={onPrevWeek} className="nav-button">
           &#8249;
         </button>
-        <h2 className="week-title">{formatWeekRange()}</h2>
+        <h2 className="week-title">{formatWeekRange(weekStart)}</h2>
         <button onClick={onNextWeek} className="nav-button">
           &#8250;
         </button>
@@ -115,7 +54,7 @@ const WeekView = ({
               {hour.toString().padStart(2, '0')}:00
             </div>
             {weekDates.map((date, dayIndex) => {
-              const daySchedules = getSchedulesForDate(date);
+              const daySchedules = getSchedulesForDate(schedules, date);
               
               return (
                 <div 
@@ -168,7 +107,6 @@ const WeekView = ({
                       if (schedule.isAllDay) return false;
                       
                       const scheduleStart = new Date(schedule.date);
-                      const scheduleEnd = new Date(schedule.endDate);
                       const currentDate = new Date(date);
                       currentDate.setHours(0, 0, 0, 0);
                       
