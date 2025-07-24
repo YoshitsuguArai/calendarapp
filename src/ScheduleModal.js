@@ -6,7 +6,8 @@ const ScheduleModal = ({
   onSave, 
   onDelete, 
   schedule, 
-  selectedDate 
+  selectedDate,
+  defaultNotificationTime = 15
 }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
@@ -18,11 +19,11 @@ const ScheduleModal = ({
   const [isAllDay, setIsAllDay] = useState(false);
   const [isMultiDay, setIsMultiDay] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderMinutes, setReminderMinutes] = useState(15);
+  const [reminderMinutes, setReminderMinutes] = useState(defaultNotificationTime);
   const [reminderType, setReminderType] = useState('preset'); // 'preset' or 'custom'
   const [customDays, setCustomDays] = useState(0);
   const [customHours, setCustomHours] = useState(0);
-  const [customMinutes, setCustomMinutes] = useState(15);
+  const [customMinutes, setCustomMinutes] = useState(defaultNotificationTime);
 
   const colors = [
     { name: 'blue', label: 'ブルー', value: '#1976d2' },
