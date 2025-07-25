@@ -7,7 +7,8 @@ const ScheduleModal = ({
   onDelete, 
   schedule, 
   selectedDate,
-  defaultNotificationTime = 15
+  defaultNotificationTime = 15,
+  language = 'ja'
 }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
@@ -190,7 +191,12 @@ const ScheduleModal = ({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('ScheduleModal is not open');
+    return null;
+  }
+
+  console.log('ScheduleModal rendering with props:', { isOpen, schedule, selectedDate });
 
   return (
     <div className="modal-overlay" onClick={onClose}>
