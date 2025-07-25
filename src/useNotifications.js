@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
+import useToast from './hooks/useToast';
 
 const useNotifications = () => {
   const [permission, setPermission] = useState(Notification.permission);
   const intervalRef = useRef(null);
   const audioRef = useRef(null);
   const notifiedSchedules = useRef(new Set()); // 通知済みのスケジュールIDを記録
+  const scheduledTimeouts = useRef(new Map()); // 予定されたタイムアウトを管理
+  const toast = useToast();
 
   useEffect(() => {
     // 通知音のオーディオオブジェクトを作成
@@ -104,6 +107,16 @@ const useNotifications = () => {
   };
 
   const showNotification = (title, options = {}) => {
+    // トーストで表示
+    const toastType = options.type || 'info';
+    toast.addToast(title, {
+      body: options.body,
+      type: toastType,
+      duration: options.duration || 5000,
+      onClick: options.onClick
+    });
+
+    // ブラウザ通知も表示（許可されている場合）
     if (permission === 'granted') {
       const notification = new Notification(title, {
         icon: '/favicon.ico',
@@ -123,64 +136,101 @@ const useNotifications = () => {
     }
   };
 
-  // scheduleReminderは削除し、定期チェックのみを使用
+  // より正確な通知スケジューリング
+  const scheduleExactNotifications = (schedules) => {
+    // 既存のタイムアウトをクリア
+    scheduledTimeouts.current.forEach(timeoutId => clearTimeout(timeoutId));
+    scheduledTimeouts.current.clear();
+
+    const now = new Date();
+    
+    schedules.forEach(schedule => {
+      // 新形式の複数リマインダー
+      if (schedule.reminders && Array.isArray(schedule.reminders)) {
+        schedule.reminders.forEach(reminder => {
+          const notificationKey = `${schedule.id}-${reminder.id}-${reminder.minutes}`;
+          if (notifiedSchedules.current.has(notificationKey)) return;
+
+          const scheduleTime = new Date(schedule.date);
+          const reminderTime = new Date(scheduleTime.getTime() - reminder.minutes * 60 * 1000);
+          const timeUntilReminder = reminderTime.getTime() - now.getTime();
+
+          // 通知時刻が未来の場合のみスケジュール
+          if (timeUntilReminder > 0 && timeUntilReminder <= 24 * 60 * 60 * 1000) { // 24時間以内
+            const timeoutId = setTimeout(() => {
+              if (!notifiedSchedules.current.has(notificationKey)) {
+                showNotification(`予定のリマインダー`, {
+                  body: `${schedule.title}\n${scheduleTime.toLocaleString('ja-JP')}`,
+                  tag: `reminder-${schedule.id}-${reminder.id}`,
+                  requireInteraction: true,
+                  type: 'warning'
+                });
+                
+                notifiedSchedules.current.add(notificationKey);
+                console.log(`✓ 正確なリマインダー通知送信: ${schedule.title} (${notificationKey})`);
+              }
+              scheduledTimeouts.current.delete(notificationKey);
+            }, timeUntilReminder);
+
+            scheduledTimeouts.current.set(notificationKey, timeoutId);
+            console.log(`📅 通知スケジュール済み: ${schedule.title} - ${reminderTime.toLocaleString('ja-JP')} (${Math.round(timeUntilReminder/1000)}秒後)`);
+          }
+        });
+      }
+      // 旧形式サポート
+      else if (schedule.reminder && schedule.reminder.enabled) {
+        const notificationKey = `${schedule.id}-legacy-${schedule.reminder.minutes}`;
+        if (notifiedSchedules.current.has(notificationKey)) return;
+
+        const scheduleTime = new Date(schedule.date);
+        const reminderTime = new Date(scheduleTime.getTime() - schedule.reminder.minutes * 60 * 1000);
+        const timeUntilReminder = reminderTime.getTime() - now.getTime();
+
+        if (timeUntilReminder > 0 && timeUntilReminder <= 24 * 60 * 60 * 1000) {
+          const timeoutId = setTimeout(() => {
+            if (!notifiedSchedules.current.has(notificationKey)) {
+              showNotification(`予定のリマインダー`, {
+                body: `${schedule.title}\n${scheduleTime.toLocaleString('ja-JP')}`,
+                tag: `reminder-${schedule.id}`,
+                requireInteraction: true,
+                type: 'warning'
+              });
+              
+              notifiedSchedules.current.add(notificationKey);
+              console.log(`✓ 正確なリマインダー通知送信(旧): ${schedule.title} (${notificationKey})`);
+            }
+            scheduledTimeouts.current.delete(notificationKey);
+          }, timeUntilReminder);
+
+          scheduledTimeouts.current.set(notificationKey, timeoutId);
+          console.log(`📅 通知スケジュール済み(旧): ${schedule.title} - ${reminderTime.toLocaleString('ja-JP')} (${Math.round(timeUntilReminder/1000)}秒後)`);
+        }
+      }
+    });
+  };
 
   const startPeriodicCheck = (schedules) => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
-    // 新しいスケジュールリストが来たら通知済みセットをクリア
-    notifiedSchedules.current.clear();
+    // スケジュールが変更された場合のみ、古いスケジュールの通知記録をクリア
+    const currentScheduleIds = new Set(schedules.map(s => s.id));
+    const keysToRemove = Array.from(notifiedSchedules.current).filter(key => {
+      const scheduleId = key.split('-')[0];
+      return !currentScheduleIds.has(parseInt(scheduleId));
+    });
+    keysToRemove.forEach(key => notifiedSchedules.current.delete(key));
 
+    // 正確な通知スケジューリングを実行
+    scheduleExactNotifications(schedules);
+
+    // フォールバック用の定期チェック（5分間隔で軽量チェック）
     intervalRef.current = setInterval(() => {
-      const now = new Date();
-      
-      schedules.forEach(schedule => {
-        // 新形式の複数リマインダーをチェック
-        if (schedule.reminders && Array.isArray(schedule.reminders)) {
-          schedule.reminders.forEach(reminder => {
-            const notificationKey = `${schedule.id}-${reminder.id}-${reminder.minutes}`;
-            if (notifiedSchedules.current.has(notificationKey)) return;
-
-            const scheduleTime = new Date(schedule.date);
-            const reminderTime = new Date(scheduleTime.getTime() - reminder.minutes * 60 * 1000);
-            
-            const timeDiff = Math.abs(now.getTime() - reminderTime.getTime());
-            if (timeDiff < 30000) {
-              showNotification(`予定のリマインダー`, {
-                body: `${schedule.title}\n${scheduleTime.toLocaleString('ja-JP')}`,
-                tag: `reminder-${schedule.id}-${reminder.id}`,
-                requireInteraction: true
-              });
-              
-              notifiedSchedules.current.add(notificationKey);
-              console.log(`リマインダー通知: ${schedule.title} (${notificationKey})`);
-            }
-          });
-        }
-        // 旧形式の単一リマインダーもサポート（後方互換性）
-        else if (schedule.reminder && schedule.reminder.enabled) {
-          const notificationKey = `${schedule.id}-legacy-${schedule.reminder.minutes}`;
-          if (notifiedSchedules.current.has(notificationKey)) return;
-
-          const scheduleTime = new Date(schedule.date);
-          const reminderTime = new Date(scheduleTime.getTime() - schedule.reminder.minutes * 60 * 1000);
-          
-          const timeDiff = Math.abs(now.getTime() - reminderTime.getTime());
-          if (timeDiff < 30000) {
-            showNotification(`予定のリマインダー`, {
-              body: `${schedule.title}\n${scheduleTime.toLocaleString('ja-JP')}`,
-              tag: `reminder-${schedule.id}`,
-              requireInteraction: true
-            });
-            
-            notifiedSchedules.current.add(notificationKey);
-            console.log(`リマインダー通知: ${schedule.title} (${notificationKey})`);
-          }
-        }
-      });
-    }, 30000); // 30秒ごとにチェック（頻度を上げて精度向上）
+      console.log('🔄 フォールバックチェック実行:', new Date().toLocaleString('ja-JP'));
+      // 正確なスケジューリングが失敗した場合のフォールバック
+      scheduleExactNotifications(schedules);
+    }, 5 * 60 * 1000); // 5分ごと
   };
 
   const stopPeriodicCheck = () => {
@@ -188,6 +238,10 @@ const useNotifications = () => {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    
+    // スケジュールされたタイムアウトもクリア
+    scheduledTimeouts.current.forEach(timeoutId => clearTimeout(timeoutId));
+    scheduledTimeouts.current.clear();
   };
 
   return {
@@ -196,7 +250,8 @@ const useNotifications = () => {
     showNotification,
     startPeriodicCheck,
     stopPeriodicCheck,
-    playNotificationSound
+    playNotificationSound,
+    ...toast
   };
 };
 

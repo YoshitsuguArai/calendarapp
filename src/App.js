@@ -3,6 +3,7 @@ import Calendar from './Calendar';
 import WeekView from './WeekView';
 import ScheduleModal from './ScheduleModal';
 import Settings from './Settings';
+import ToastNotification from './components/ToastNotification';
 import useNotifications from './useNotifications';
 import { useScheduleManager } from './hooks/useScheduleManager';
 import { useSettings } from './hooks/useSettings';
@@ -25,7 +26,9 @@ function App() {
     requestPermission, 
     startPeriodicCheck, 
     stopPeriodicCheck,
-    showNotification
+    showNotification,
+    toasts,
+    removeToast
   } = useNotifications();
 
 
@@ -59,9 +62,14 @@ function App() {
   }, [schedules, permission, requestPermission, startPeriodicCheck, stopPeriodicCheck]);
 
   const handleDateClick = (date) => {
-    setSelectedDate(date);
-    setEditingSchedule(null);
-    setIsModalOpen(true);
+    try {
+      console.log('handleDateClick called with date:', date);
+      setSelectedDate(date);
+      setEditingSchedule(null);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Error in handleDateClick:', error);
+    }
   };
 
   const handleScheduleClick = (schedule) => {
@@ -105,7 +113,8 @@ function App() {
   const handleTestNotification = () => {
     showNotification(t('notification.testTitle'), {
       body: t('notification.testBody'),
-      requireInteraction: false
+      requireInteraction: false,
+      type: 'success'
     });
   };
 
@@ -235,6 +244,11 @@ function App() {
         onTestNotification={handleTestNotification}
         notificationPermission={permission}
         language={settings.language}
+      />
+      
+      <ToastNotification 
+        toasts={toasts} 
+        removeToast={removeToast} 
       />
     </div>
   );
