@@ -31,7 +31,6 @@ const Calendar = ({
   
   
   const renderCalendarDays = () => {
-    const days = [];
     const weeks = [];
     let currentWeek = [];
     
@@ -54,7 +53,11 @@ const Calendar = ({
         <div 
           key={day} 
           className={`calendar-day ${isToday(date) ? 'today' : ''}`}
-          onClick={() => onDateClick(date)}
+          onClick={(e) => {
+            e.preventDefault();
+            console.log('Calendar date clicked:', date);
+            onDateClick(date);
+          }}
         >
           <span className="day-number">{day}</span>
           <div className="schedule-dots">
